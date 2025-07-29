@@ -450,6 +450,34 @@ where
     async fn serve_mock(&self, req: &HttpMockRequest) -> Result<Response<Bytes>, Error> {
         let mock_response = self.state.serve_mock(req)?;
 
+        #[derive(Debug, Serialize)]
+        struct SerializableMockRequest {
+            scheme: String,
+            uri: String,
+            method: String,
+            headers: Vec<(String, String)>,
+            version: String,
+            body: String,
+        }
+
+        impl From<&HttpMockRequest> for SerializableMockRequest {
+            fn from(value: &HttpMockRequest) -> Self {
+                let body = value.body_string();
+                Self {
+                    scheme: value.scheme().clone(),
+                    uri: value.uri_str().to_string(),
+                    method: value.method().to_string(),
+                    headers: value.headers_vec().clone(),
+                    version: value.version_ref().to_string(),
+                    body,
+                }
+            }
+        }
+
+        let printable_req: SerializableMockRequest = req.into();
+        let serialized_request = serde_json::to_string(&printable_req)
+            .unwrap_or("failed to serialize request".to_string());
+
         if let Some(mock_response) = mock_response {
             let status_code = match mock_response.status.as_ref() {
                 None => StatusCode::OK,
@@ -481,12 +509,8 @@ where
 
         let status_code = mock_response.map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
 
-        return response(
-            status_code,
-            Some(ErrorResponse::new(
-                &"Request did not match any route or mock",
-            )),
-        );
+        let msg = format!("Request did not match any route or mock: {serialized_request}:");
+        return response(status_code, Some(ErrorResponse::new(&msg)));
     }
 }
 
