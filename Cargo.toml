@@ -19,7 +19,7 @@ base64 = "0.22"
 regex = "1"
 log = "0.4"
 url = "2"
-stringmetrics = "2"
+stringmetrics = { git = "https://github.com/flox/stringmetrics", version = "2" }
 assert-json-diff = "2"
 async-trait = "0.1"
 async-object-pool = "0.1"
